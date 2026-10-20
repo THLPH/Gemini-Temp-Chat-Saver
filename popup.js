@@ -2,31 +2,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusDiv = document.getElementById('status');
     const backupStatus = document.getElementById('backup-status');
 
-    // 1. Check if we have an auto-saved chat in storage
+    // Read cached state
     chrome.storage.local.get(['last_saved_chat'], (result) => {
-        if (result.last_saved_chat && result.last_saved_chat.messages.length > 0) {
+        if (result.last_saved_chat && result.last_saved_chat.messages?.length > 0) {
             const chat = result.last_saved_chat;
-            backupStatus.innerText = `Saved: ${chat.messages.length} msgs (${chat.date} at ${chat.timestamp})`;
+            backupStatus.innerText = `Cached ${chat.messages.length} msgs (${chat.timestamp})`;
         } else {
-            backupStatus.innerText = "No chat recorded yet.";
+            backupStatus.innerText = "No cached conversation.";
         }
     });
 
-    // 2. Open Offline Viewer
     document.getElementById('btn-open-offline').addEventListener('click', () => {
         chrome.tabs.create({ url: chrome.runtime.getURL('viewer.html') });
     });
 
-    // 3. Tab Protection toggle
     document.getElementById('protect-toggle').addEventListener('change', (e) => {
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-            if (tabs[0]) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]?.id) {
                 chrome.tabs.sendMessage(tabs[0].id, { action: "updateSettings", protectTab: e.target.checked });
             }
         });
     });
 
-    // 4. Export Buttons Handlers
     document.getElementById('btn-txt').addEventListener('click', () => handleExport('txt'));
     document.getElementById('btn-md').addEventListener('click', () => handleExport('md'));
     document.getElementById('btn-html').addEventListener('click', () => handleExport('html'));
@@ -35,20 +32,17 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDiv.innerText = "Processing...";
         const scope = document.getElementById('export-scope').value;
 
-        // Try getting live chat from active tab first
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-            const currentTab = tabs[0];
-            
-            if (currentTab && currentTab.url && currentTab.url.includes("gemini.google.com")) {
-                chrome.tabs.sendMessage(currentTab.id, {action: "scrapeChat"}, (response) => {
-                    if (response && response.messages && response.messages.length > 0) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const tab = tabs[0];
+            if (tab?.url?.includes("gemini.google.com")) {
+                chrome.tabs.sendMessage(tab.id, { action: "scrapeChat" }, (response) => {
+                    if (response?.messages?.length > 0) {
                         triggerDownload(response.messages, format, scope, response.isTempChat);
                     } else {
                         fallbackToStorage(format, scope);
                     }
                 });
             } else {
-                // If not on Gemini tab, fall back to storage
                 fallbackToStorage(format, scope);
             }
         });
@@ -56,27 +50,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fallbackToStorage(format, scope) {
         chrome.storage.local.get(['last_saved_chat'], (result) => {
-            if (result.last_saved_chat && result.last_saved_chat.messages.length > 0) {
+            if (result.last_saved_chat?.messages?.length > 0) {
                 triggerDownload(result.last_saved_chat.messages, format, scope, true);
             } else {
-                statusDiv.innerText = "No chat messages found.";
+                statusDiv.innerText = "No messages available to export.";
             }
         });
     }
 });
 
-// Trigger file download using Chrome's native download manager (Never hangs)
 function triggerDownload(allMessages, format, scope, isTemp) {
     const statusDiv = document.getElementById('status');
-    
-    let messages = allMessages.filter(msg => {
+    const messages = allMessages.filter(msg => {
         if (scope === 'user' && msg.role !== 'USER') return false;
         if (scope === 'ai' && msg.role !== 'GEMINI') return false;
         return true;
     });
 
     if (messages.length === 0) {
-        statusDiv.innerText = "No matching messages to export.";
+        statusDiv.innerText = "No messages matching selected scope.";
         return;
     }
 
@@ -84,16 +76,46 @@ function triggerDownload(allMessages, format, scope, isTemp) {
     let mimeType = "text/plain";
 
     if (format === 'txt') {
-        content = `GEMINI TRANSCRIPT\n=========================\n\n`;
-        messages.forEach(m => { content += `[${m.role}]:\n${m.text}\n\n-------------------------\n\n`; });
+        content = `GEMINI TRANSCRIPT\nExported: ${new Date().toLocaleString()}\n${'='.repeat(40)}\n\n`;
+        messages.forEach(m => {
+            content += `[${m.role}]\n${m.text}\n\n${'-'.repeat(40)}\n\n`;
+        });
     } else if (format === 'md') {
-        content = `# Gemini Transcript\n\n---\n\n`;
-        messages.forEach(m => { content += `### **${m.role}**\n\n${m.text}\n\n---\n\n`; });
+        content = `# Gemini Transcript\n*Exported: ${new Date().toLocaleString()}*\n\n---\n\n`;
+        messages.forEach(m => {
+            content += `### ${m.role}\n\n${m.text}\n\n---\n\n`;
+        });
     } else if (format === 'html') {
         mimeType = "text/html";
-        content = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:sans-serif;max-width:800px;margin:40px auto;background:#1e1e1e;color:#e0e0e0;line-height:1.6;}.msg{margin-bottom:20px;padding:15px;border-radius:8px;}.user{background:#2d2d30;border-left:4px solid #4a90e2;}.gemini{background:#252526;border-left:4px solid #b388ff;}.role{font-weight:bold;margin-bottom:10px;opacity:0.8;}pre{background:#000;padding:10px;overflow-x:auto;}</style></head><body><h2>Gemini Transcript</h2>`;
-        messages.forEach(m => { content += `<div class="msg ${m.role.toLowerCase()}"><div class="role">${m.role}</div><div>${m.html}</div></div>\n`; });
-        content += `</body></html>`;
+        content = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gemini Transcript</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 760px; margin: 40px auto; padding: 0 20px; background: #0d1117; color: #c9d1d9; }
+  h1 { font-size: 20px; border-bottom: 1px solid #21262d; padding-bottom: 10px; margin-bottom: 24px; color: #f0f6fc; }
+  .turn { margin-bottom: 24px; border: 1px solid #30363d; border-radius: 6px; overflow: hidden; }
+  .header { padding: 8px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .turn.user .header { background: #161b22; color: #58a6ff; border-bottom: 1px solid #30363d; }
+  .turn.gemini .header { background: #161b22; color: #bc8cff; border-bottom: 1px solid #30363d; }
+  .content { padding: 16px; font-size: 14px; overflow-wrap: break-word; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13px; }
+  th, td { border: 1px solid #30363d; padding: 8px 12px; text-align: left; }
+  th { background: #161b22; }
+  pre { background: #161b22; padding: 12px; border-radius: 6px; overflow-x: auto; }
+  code { font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Gemini Transcript <span style="font-size: 12px; font-weight: normal; color: #8b949e;">(${new Date().toLocaleString()})</span></h1>
+${messages.map(m => `
+<div class="turn ${m.role.toLowerCase()}">
+  <div class="header">${m.role}</div>
+  <div class="content">${m.html}</div>
+</div>`).join('')}
+</body>
+</html>`;
     }
 
     const dateStr = new Date().toISOString().split('T')[0];
@@ -101,7 +123,6 @@ function triggerDownload(allMessages, format, scope, isTemp) {
     if (scope === 'user') filename += '_PromptsOnly';
     filename += `.${format}`;
 
-    // Convert to Data URL and download via Chrome Downloads API
     const base64Data = btoa(unescape(encodeURIComponent(content)));
     const dataUrl = `data:${mimeType};base64,${base64Data}`;
 
@@ -110,7 +131,7 @@ function triggerDownload(allMessages, format, scope, isTemp) {
         filename: filename,
         saveAs: false
     }, () => {
-        statusDiv.innerText = "Downloaded successfully!";
-        setTimeout(() => window.close(), 1200);
+        statusDiv.innerText = "Export complete.";
+        setTimeout(() => window.close(), 1000);
     });
 }

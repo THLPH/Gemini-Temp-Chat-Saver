@@ -1,30 +1,62 @@
 let protectTab = true;
 
-// Helper: Scrape all messages currently on screen
+// Strip UI artifacts (tooltips, hidden screen-reader labels, prompt buttons)
+function cleanNode(node) {
+    const clone = node.cloneNode(true);
+    const junkSelectors = [
+        '.cdk-visually-hidden',
+        'gem-icon-button',
+        'button',
+        'sources-carousel-inline',
+        'sources-list',
+        '.elicitations-container',
+        '.response-container-header',
+        '.response-container-footer',
+        '.model-response-label-announcer',
+        '.file-preview-container',
+        '.luminous-actions-container'
+    ];
+    junkSelectors.forEach(sel => {
+        clone.querySelectorAll(sel).forEach(el => el.remove());
+    });
+    return clone;
+}
+
 function scrapeCurrentChat() {
-    // Robust selector targeting Gemini's message elements
-    const nodes = document.querySelectorAll('user-query, model-response, message-content');
-    let messages = [];
+    // Target strictly top-level turn containers to avoid duplicate scraping
+    const nodes = document.querySelectorAll('user-query, model-response');
+    const messages = [];
 
     nodes.forEach(node => {
-        const isUser = node.tagName.toLowerCase() === 'user-query' || node.classList.contains('user-query');
-        const role = isUser ? 'USER' : 'GEMINI';
+        const isUser = node.tagName.toLowerCase() === 'user-query';
+        const cleaned = cleanNode(node);
 
-        let text = node.innerText || '';
-        let html = node.innerHTML || '';
+        let text = '';
+        let html = '';
 
-        // Strip Gemini UI action buttons
-        text = text.replace(/volume_up/g, '').replace(/content_copy/g, '').replace(/good_response/g, '').replace(/bad_response/g, '').trim();
+        if (isUser) {
+            const queryBlock = cleaned.querySelector('.query-text') || cleaned;
+            text = queryBlock.innerText.trim();
+            html = `<p>${text}</p>`;
+        } else {
+            const mdBlock = cleaned.querySelector('.markdown') || cleaned;
+            text = mdBlock.innerText.trim();
+            html = mdBlock.innerHTML.trim();
+        }
 
         if (text.length > 0) {
-            messages.push({ role, text, html });
+            messages.push({
+                role: isUser ? 'USER' : 'GEMINI',
+                text: text,
+                html: html
+            });
         }
     });
 
     return messages;
 }
 
-// 1. Silent Auto-Saver (Saves to chrome.storage every time the chat changes)
+// Background auto-backup with 1-second debounce
 let saveTimeout = null;
 const observer = new MutationObserver(() => {
     clearTimeout(saveTimeout);
@@ -40,23 +72,23 @@ const observer = new MutationObserver(() => {
                 }
             });
         }
-    }, 1000); // 1-second debounce
+    }, 1000);
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
 
-// 2. Prevent Accidental Exit on Temp Chats
+// Prevent accidental exit on temporary chats only
 window.addEventListener('beforeunload', (e) => {
     const isTempChat = window.location.pathname === '/app' || window.location.pathname === '/app/';
     const hasMessages = document.querySelectorAll('user-query, model-response').length > 0;
-    
+
     if (protectTab && isTempChat && hasMessages) {
         e.preventDefault();
         e.returnValue = '';
     }
 });
 
-// 3. Listen for requests from popup
+// Runtime messaging for popup triggers
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "updateSettings") {
         protectTab = request.protectTab;
@@ -64,6 +96,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     if (request.action === "scrapeChat") {
         const msgs = scrapeCurrentChat();
-        sendResponse({ messages: msgs, isTempChat: (window.location.pathname === '/app') });
+        sendResponse({ 
+            messages: msgs, 
+            isTempChat: (window.location.pathname === '/app' || window.location.pathname === '/app/') 
+        });
     }
 });
