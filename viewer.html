@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Gemini Restored Chat</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 850px; margin: 40px auto; background: #131314; color: #e3e3e3; line-height: 1.6; padding: 0 20px; }
+        .header { border-bottom: 1px solid #3c4043; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        .msg { margin-bottom: 24px; padding: 18px; border-radius: 12px; }
+        .user { background: #282a2c; border-left: 4px solid #7cacf8; }
+        .gemini { background: #1e1f20; border-left: 4px solid #c58af9; }
+        .role { font-weight: bold; font-size: 13px; margin-bottom: 10px; color: #9aa0a6; text-transform: uppercase; }
+        pre { background: #000; padding: 12px; border-radius: 6px; overflow-x: auto; }
+        .empty { text-align: center; color: #9aa0a6; margin-top: 100px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h2 style="margin:0;">Offline Chat Recovery</h2>
+            <div id="meta" style="font-size: 13px; color: #9aa0a6; margin-top: 4px;">Loading...</div>
+        </div>
+    </div>
+
+    <div id="chat-container"></div>
+
+    <script>
+        chrome.storage.local.get(['last_saved_chat'], (res) => {
+            const chat = res.last_saved_chat;
+            const container = document.getElementById('chat-container');
+            const meta = document.getElementById('meta');
+
+            if (!chat || !chat.messages || chat.messages.length === 0) {
+                container.innerHTML = '<div class="empty">No saved chats found in local storage.</div>';
+                meta.innerText = "";
+                return;
+            }
+
+            meta.innerText = `Recorded on ${chat.date} at ${chat.timestamp} (${chat.messages.length} messages)`;
+
+            chat.messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `msg ${msg.role.toLowerCase()}`;
+                div.innerHTML = `<div class="role">${msg.role}</div><div>${msg.html}</div>`;
+                container.appendChild(div);
+            });
+        });
+    </script>
+</body>
+</html>

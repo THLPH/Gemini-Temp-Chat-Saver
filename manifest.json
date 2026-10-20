@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini Temp Saver & Restorer",
+  "version": "2.0",
+  "description": "Auto-saves temp chats, prevents accidental closing, and exports to TXT/MD/HTML.",
+  "permissions": ["storage", "downloads", "activeTab"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Gemini Saver"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
