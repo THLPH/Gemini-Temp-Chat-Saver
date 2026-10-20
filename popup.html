@@ -3,33 +3,32 @@
 <head>
     <meta charset="utf-8">
     <style>
-        body { width: 300px; padding: 15px; font-family: system-ui, sans-serif; background: #202124; color: #e8eaed; margin: 0; }
-        h3 { margin-top: 0; font-size: 15px; border-bottom: 1px solid #3c4043; padding-bottom: 8px; color: #b388ff; }
-        .section { margin-bottom: 16px; background: #292a2d; padding: 10px; border-radius: 8px; border: 1px solid #3c4043; }
-        label { font-size: 12px; color: #9aa0a6; display: block; margin-bottom: 5px; }
-        select { width: 100%; background: #303134; color: #fff; border: 1px solid #5f6368; padding: 6px; border-radius: 4px; box-sizing: border-box; }
-        .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 10px; }
-        .checkbox-row input { margin: 0; cursor: pointer; }
+        body { width: 300px; padding: 14px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #18181b; color: #f4f4f5; margin: 0; box-sizing: border-box; }
+        h3 { margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #e4e4e7; border-bottom: 1px solid #27272a; padding-bottom: 8px; }
+        .section { margin-bottom: 12px; background: #27272a; padding: 10px; border-radius: 6px; border: 1px solid #3f3f46; }
+        label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #a1a1aa; display: block; margin-bottom: 6px; font-weight: 600; }
+        select { width: 100%; background: #18181b; color: #f4f4f5; border: 1px solid #3f3f46; padding: 6px 8px; border-radius: 4px; font-size: 12px; outline: none; }
+        .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 12px; color: #d4d4d8; }
+        .checkbox-row input { margin: 0; cursor: pointer; accent-color: #8b5cf6; }
         .btn-group { display: flex; gap: 6px; margin-top: 8px; }
-        button { flex: 1; padding: 8px 0; background: #3c4043; border: 1px solid #5f6368; color: #8ab4f8; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
-        button:hover { background: #4a4d51; color: #fff; }
-        .restore-btn { width: 100%; background: #8ab4f8; color: #000; border: none; margin-top: 8px; }
-        .restore-btn:hover { background: #aecbfa; }
-        #status { font-size: 11px; color: #81c995; margin-top: 8px; text-align: center; }
-        .backup-info { font-size: 11px; color: #9aa0a6; }
+        button { flex: 1; padding: 6px 0; background: #3f3f46; border: none; color: #f4f4f5; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px; transition: background 0.15s ease; }
+        button:hover { background: #52525b; }
+        .restore-btn { width: 100%; background: #6d28d9; color: #fff; margin-top: 8px; font-weight: 600; }
+        .restore-btn:hover { background: #7c3aed; }
+        #status { font-size: 11px; color: #a1a1aa; margin-top: 8px; text-align: center; min-height: 14px; }
+        .backup-info { font-size: 11px; color: #a1a1aa; }
     </style>
 </head>
 <body>
-    <h3>Gemini Temp Chat Saver</h3>
+    <h3>Gemini Temp Saver</h3>
     
     <div class="checkbox-row">
         <input type="checkbox" id="protect-toggle" checked>
-        <label for="protect-toggle" style="margin:0; cursor:pointer;">Warn before closing tab</label>
+        <label for="protect-toggle" style="cursor:pointer; text-transform:none; margin:0; font-weight:normal;">Warn before closing active chat</label>
     </div>
 
-    <!-- Active Tab Export -->
     <div class="section">
-        <label>Export Current Chat:</label>
+        <label>Export Current</label>
         <select id="export-scope">
             <option value="all">Full Conversation</option>
             <option value="user">User Prompts Only</option>
@@ -42,11 +41,10 @@
         </div>
     </div>
 
-    <!-- Offline Recovery -->
     <div class="section">
-        <label>Offline Chat Recovery:</label>
-        <div class="backup-info" id="backup-status">No backup found yet.</div>
-        <button class="restore-btn" id="btn-open-offline">📂 Open Restored Chat Viewer</button>
+        <label>Recovery Cache</label>
+        <div class="backup-info" id="backup-status">Reading storage...</div>
+        <button class="restore-btn" id="btn-open-offline">View Saved Session</button>
     </div>
 
     <div id="status"></div>
