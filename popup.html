@@ -3,52 +3,87 @@
 <head>
     <meta charset="utf-8">
     <style>
-        body { width: 300px; padding: 14px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #18181b; color: #f4f4f5; margin: 0; box-sizing: border-box; }
-        h3 { margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #e4e4e7; border-bottom: 1px solid #27272a; padding-bottom: 8px; }
-        .section { margin-bottom: 12px; background: #27272a; padding: 10px; border-radius: 6px; border: 1px solid #3f3f46; }
-        label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #a1a1aa; display: block; margin-bottom: 6px; font-weight: 600; }
-        select { width: 100%; background: #18181b; color: #f4f4f5; border: 1px solid #3f3f46; padding: 6px 8px; border-radius: 4px; font-size: 12px; outline: none; }
-        .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 12px; color: #d4d4d8; }
-        .checkbox-row input { margin: 0; cursor: pointer; accent-color: #8b5cf6; }
-        .btn-group { display: flex; gap: 6px; margin-top: 8px; }
-        button { flex: 1; padding: 6px 0; background: #3f3f46; border: none; color: #f4f4f5; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px; transition: background 0.15s ease; }
-        button:hover { background: #52525b; }
-        .restore-btn { width: 100%; background: #6d28d9; color: #fff; margin-top: 8px; font-weight: 600; }
-        .restore-btn:hover { background: #7c3aed; }
-        #status { font-size: 11px; color: #a1a1aa; margin-top: 8px; text-align: center; min-height: 14px; }
-        .backup-info { font-size: 11px; color: #a1a1aa; }
+        :root {
+            --bg: #111215;
+            --panel: #18191f;
+            --border: #282a32;
+            --border-hover: #3e414d;
+            --text-main: #e2e4e9;
+            --text-muted: #8c92a0;
+            --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --mono: ui-monospace, Menlo, monospace;
+        }
+        * { box-sizing: border-box; }
+        body { width: 310px; padding: 14px; font-family: var(--sans); background: var(--bg); color: var(--text-main); margin: 0; font-size: 13px; }
+        
+        .header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px; }
+        .header-title { font-weight: 700; font-size: 13px; color: #fff; }
+        .version-tag { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+
+        .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+        .panel-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 10px; font-weight: 700; font-family: var(--mono); }
+
+        select { width: 100%; background: var(--bg); color: var(--text-main); border: 1px solid var(--border); padding: 7px 10px; font-size: 13px; outline: none; margin-bottom: 10px; border-radius: 4px; }
+        select:focus { border-color: var(--border-hover); }
+
+        .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; }
+        .row:last-child { margin-bottom: 0; }
+        input[type="checkbox"] { margin: 0; width: 14px; height: 14px; cursor: pointer; accent-color: #4f46e5; }
+        label { cursor: pointer; user-select: none; font-weight: 500; }
+
+        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+        button { background: var(--bg); border: 1px solid var(--border); color: var(--text-main); padding: 7px 0; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 4px; transition: background 0.15s, border-color 0.15s; }
+        button:hover { background: #22242c; border-color: var(--border-hover); }
+        button.btn-wide { width: 100%; margin-top: 6px; }
+        button.btn-action { background: #23252e; border-color: #3b3d4a; }
+        button.btn-action:hover { background: #2c2f3b; }
+
+        #cache-meta { color: var(--text-muted); font-size: 12px; margin-bottom: 10px; }
+        #status { font-size: 11px; color: var(--text-muted); text-align: center; height: 14px; margin-top: 6px; font-family: var(--mono); }
     </style>
 </head>
 <body>
-    <h3>Gemini Temp Saver</h3>
-    
-    <div class="checkbox-row">
-        <input type="checkbox" id="protect-toggle" checked>
-        <label for="protect-toggle" style="cursor:pointer; text-transform:none; margin:0; font-weight:normal;">Warn before closing active chat</label>
+    <div class="header-bar">
+        <span class="header-title">Gemini Temp Saver</span>
+        <span class="version-tag">v3.0</span>
     </div>
 
-    <div class="section">
-        <label>Export Current</label>
-        <select id="export-scope">
+    <div class="panel">
+        <div class="panel-label">System Guard</div>
+        <div class="row">
+            <input type="checkbox" id="cb-protect">
+            <label for="cb-protect">Warn before closing tab</label>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-label">Export Filters</div>
+        <select id="sel-scope">
             <option value="all">Full Conversation</option>
             <option value="user">User Prompts Only</option>
-            <option value="ai">AI Responses Only</option>
+            <option value="ai">Model Responses Only</option>
         </select>
-        <div class="btn-group">
+        
+        <div class="row"><input type="checkbox" id="cb-user-img"><label for="cb-user-img">User Images</label></div>
+        <div class="row"><input type="checkbox" id="cb-ai-img"><label for="cb-ai-img">AI Generated Images</label></div>
+        <div class="row"><input type="checkbox" id="cb-time"><label for="cb-time">Include Timestamps</label></div>
+        <div class="row"><input type="checkbox" id="cb-div"><label for="cb-div">Include Dividers</label></div>
+
+        <div class="btn-grid">
             <button id="btn-txt">TXT</button>
             <button id="btn-md">MD</button>
             <button id="btn-html">HTML</button>
         </div>
+        <button class="btn-wide" id="btn-imgs-only">Extract Images Only</button>
     </div>
 
-    <div class="section">
-        <label>Recovery Cache</label>
-        <div class="backup-info" id="backup-status">Reading storage...</div>
-        <button class="restore-btn" id="btn-open-offline">View Saved Session</button>
+    <div class="panel">
+        <div class="panel-label">Local Cache</div>
+        <div id="cache-meta">Loading storage...</div>
+        <button class="btn-wide btn-action" id="btn-offline">Open Session Archive</button>
     </div>
 
     <div id="status"></div>
-
     <script src="popup.js"></script>
 </body>
 </html>
